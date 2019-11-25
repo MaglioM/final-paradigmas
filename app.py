@@ -5,7 +5,7 @@ from datetime import datetime
 from flask import Flask, render_template, redirect, url_for, flash, session
 from flask_bootstrap import Bootstrap
 
-from forms import LoginForm, SaludarForm, RegistrarForm
+from forms import LoginForm, SaludarForm, RegistrarForm, ConsultarForm
 
 
 app = Flask(__name__)
@@ -94,6 +94,43 @@ def logout():
     else:
         return redirect(url_for('index'))
 
+@app.route('/clientes')
+def clientes():
+	if 'username' in session:	
+		with open('clientes.csv') as planillaClientes:
+			planilla_csv = csv.reader(planillaClientes)
+			encabezado_csv = next(planilla_csv)
+			return render_template('clientes.html', encabezado_csv=encabezado_csv, planilla_csv=planilla_csv)
+	else:
+		return render_template('sin_permiso.html')
+
+@app.route('/consultas', methods=['GET', 'POST'])
+def consultas():
+	if 'username' in session:
+		formulario = ConsultarForm()
+		filtro = formulario.consulta.data
+		resultado = []
+		if formulario.validate_on_submit():
+			with open('clientes.csv') as planillaClientes:
+				planilla_csv = csv.reader(planillaClientes)
+				encabezado_csv = next(planilla_csv)
+				cliente = next(planilla_csv, None)
+				while cliente:			
+					if filtro in cliente[3]:
+						resultado.append(cliente)
+					cliente = next(planilla_csv, None)
+				if resultado == []:
+					flash('No hay resultados para tu búsqueda')
+				else:
+					return render_template('resultado.html', encabezado_csv=encabezado_csv, resultado=resultado)
+		return render_template('consultas.html', form=formulario, resultado=resultado)
+	else:
+		return render_template('sin_permiso.html')
+
+
+@app.route('/sobre')
+def sobre():
+	return render_template('sobre.html')
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', debug=True)
